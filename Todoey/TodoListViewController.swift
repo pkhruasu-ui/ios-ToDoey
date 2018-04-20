@@ -10,17 +10,36 @@ import UIKit
 
 class TodoListViewController: UITableViewController {
 
-    var itemArray = ["Find mike", "Buy Games", "Destroy this reality"]
+//    var itemArray = ["Find mike", "Buy Games", "Destroy this reality"]
     
-    let defaults = UserDefaults.standard
+    var itemArray = [Item]()
+    
+    // Storing data using default plist
+    // let defaults = UserDefaults.standard
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
     
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
-    
-        if let items = defaults.array(forKey: "ToDoListArray") as? [String] {
-            itemArray = items
-        }
+        
+//        let item1 = Item()
+//        item1.title = "Find Mike"
+//        itemArray.append(item1)
+//
+//        let item2 = Item()
+//        item2.title = "Buy Games"
+//        itemArray.append(item2)
+//
+//        let item3 = Item()
+//        item3.title = "Destroy this reality"
+//        itemArray.append(item3)
+
+        
+        
+        loadItems()
+        
+        
+        
 //        itemTableView.delegate = self
 //        itemTableView.dataSource = self
     }
@@ -36,12 +55,15 @@ class TodoListViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 //        print(itemArray[indexPath.row])
+        itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         
-        if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark {
+        if itemArray[indexPath.row].done == false {
             tableView.cellForRow(at: indexPath)?.accessoryType = .none
         } else {
             tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
         }
+        
+        self.saveItems()
         
         tableView.deselectRow(at: indexPath, animated: true)
     }
@@ -54,7 +76,8 @@ class TodoListViewController: UITableViewController {
         let item = itemArray[indexPath.row]
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
-        cell.textLabel?.text = item
+        cell.textLabel?.text = item.title
+        cell.accessoryType = item.done ? .checkmark : .none
         
         return cell
         
@@ -71,9 +94,14 @@ class TodoListViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Item", style: .default) {
             (action) in
             
-            self.itemArray.append(textField.text ?? "New Item")
+            let newItem = Item()
+            newItem.title = textField.text ?? "New Item"
+            self.itemArray.append(newItem)
             
-            self.defaults.set(self.itemArray, forKey: "ToDoListArray")
+//            self.defaults.set(self.itemArray, forKey: "ToDoListArray")
+            
+            self.saveItems()
+            
             
             self.tableView.reloadData()
         }
@@ -90,7 +118,36 @@ class TodoListViewController: UITableViewController {
         
         present(alert, animated: true, completion: nil)
         
+    }
+    
+    func saveItems() {
+        let encoder = PropertyListEncoder()
+        do {
+            let data = try encoder.encode(self.itemArray)
+            try data.write(to: self.dataFilePath!)
+            
+        } catch {
+            print("Error encoding item array, \(error)")
+        }
+    }
+    
+    func loadItems() {
+        if let data = try? Data(contentsOf: dataFilePath!) {
+            let decoder = PropertyListDecoder()
+            
+            do {
+                itemArray = try decoder.decode([Item].self, from: data)
+            } catch {
+                fatalError("Error decoding data")
+            }
+            
+        }
         
+        
+        // Using default plist to save data
+        //        if let items = defaults.array(forKey: "ToDoListArray") as? [String] {
+        //            itemArray = items
+        //        }
     }
 }
 
