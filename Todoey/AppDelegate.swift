@@ -8,6 +8,7 @@
 
 import UIKit
 import CoreData
+import RealmSwift
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -18,6 +19,34 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
 //        print(NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).last as! String)
+        
+        print(Realm.Configuration.defaultConfiguration.fileURL as Any)
+        
+        let config = Realm.Configuration(
+            // Set the new schema version. This must be greater than the previously used
+            // version (if you've never set a schema version before, the version is 0).
+            schemaVersion: 1,
+            // Set the block which will be called automatically when opening a Realm with
+            // a schema version lower than the one set above
+            migrationBlock: {
+                migration, oldSchemaVersion in
+                //nothing
+                if oldSchemaVersion < 1 {
+                    migration.enumerateObjects(ofType: Item.className()) {
+                        oldObject, newObject in
+                        newObject!["dateCreated"] = Date()
+                    }
+                }
+        })
+        
+        Realm.Configuration.defaultConfiguration = config
+        
+        do {
+            _ = try Realm()
+        } catch {
+            print("Error initliazing Realm....")
+        }
+        
         
         return true
     }
