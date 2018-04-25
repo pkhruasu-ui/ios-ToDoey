@@ -8,23 +8,31 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
-class CategoryViewController: UITableViewController {
-
+class CategoryViewController: SwipeTableViewController {
+    
     let realm = try! Realm()
-    var categoryArray: Results<Category>?
+    var categories: Results<Category>?
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         loadCategories()
+        
+        tableView.rowHeight = 80
+        tableView.separatorStyle = .none
     }
 
     //MARK - Tableview Datasource Methods
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-        cell.textLabel?.text = categoryArray?[indexPath.row].name ?? "No Category added"
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        
+        let category = categories?[indexPath.row]
+        cell.textLabel?.text = category?.name ?? "No Category added"
+        cell.backgroundColor = UIColor(hexString: category?.colour ?? "1D9BF6")
+        cell.textLabel?.textColor = UIColor(contrastingBlackOrWhiteColorOn: cell.backgroundColor, isFlat: true)
         
         return cell
     }
@@ -41,22 +49,24 @@ class CategoryViewController: UITableViewController {
     }
     
     func loadCategories() {
-        categoryArray = realm.objects(Category.self)
-        
-//        let request : NSFetchRequest<Category> = Category.fetchRequest()
-//        
-//        do {
-//            categoryArray = try context.fetch(request)
-//        } catch {
-//            print("Error fetching category \(error)")
-//        }
-//        
+        categories = realm.objects(Category.self)
         tableView.reloadData()
-        
     }
+    
+    //MARK - Delete Category
+    override func updateModel(at indexPath: IndexPath) {
+        if let categoryForDeletion = self.categories?[indexPath.row] {
+            do {
+                try self.realm.write {
+                    self.realm.delete(categoryForDeletion)
+                }
+            } catch {
+                print("Error deleting item")
+            }
+        }
+    }
+    
     //MARK - Add New Categories
-    
-    
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         var textField = UITextField()
         
@@ -67,8 +77,8 @@ class CategoryViewController: UITableViewController {
             
             let newCategory = Category()    // get Realm DB reference to Category, will auto update the table without
                                             // the need to append it
-            
             newCategory.name = textField.text ?? "New Category"
+            newCategory.colour = UIColor.randomFlat().hexValue()
 //            self.categoryArray.append(newCategory)
             self.saveItems(category: newCategory)
             
@@ -89,7 +99,7 @@ class CategoryViewController: UITableViewController {
     
     //MARK - Tableview Delegate Methods
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return categoryArray?.count ?? 1
+        return categories?.count ?? 1
     }
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -100,7 +110,7 @@ class CategoryViewController: UITableViewController {
         let destinationVC = segue.destination as! TodoListViewController
         
         if let indexPath = tableView.indexPathForSelectedRow {
-            destinationVC.selectedCategory = categoryArray?[indexPath.row]
+            destinationVC.selectedCategory = categories?[indexPath.row]
         }
     }
 }
